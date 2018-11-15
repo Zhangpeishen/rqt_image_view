@@ -33,8 +33,8 @@
 #include <rqt_image_view/image_view.h>
 
 #include <pluginlib/class_list_macros.h>
-#include <ros/master.h>
-#include <sensor_msgs/image_encodings.h>
+// #include <ros/master.h>
+#include <sensor_msgs/image_encodings.hpp>
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -47,6 +47,7 @@ namespace rqt_image_view {
 
 ImageView::ImageView()
   : rqt_gui_cpp::Plugin()
+  , rclcpp::Node("ImageView")
   , widget_(0)
   , num_gridlines_(0)
   , rotate_state_(ROTATE_0)
@@ -117,7 +118,7 @@ void ImageView::initPlugin(qt_gui_cpp::PluginContext& context)
 void ImageView::shutdownPlugin()
 {
   subscriber_.shutdown();
-  pub_mouse_left_.shutdown();
+  // pub_mouse_left_.shutdown();
 }
 
 void ImageView::saveSettings(qt_gui_cpp::Settings& plugin_settings, qt_gui_cpp::Settings& instance_settings) const
@@ -182,45 +183,45 @@ void ImageView::restoreSettings(const qt_gui_cpp::Settings& plugin_settings, con
 
 void ImageView::updateTopicList()
 {
-  QSet<QString> message_types;
-  message_types.insert("sensor_msgs/Image");
-  QSet<QString> message_sub_types;
-  message_sub_types.insert("sensor_msgs/CompressedImage");
+  // QSet<QString> message_types;
+  // message_types.insert("sensor_msgs/Image");
+  // QSet<QString> message_sub_types;
+  // message_sub_types.insert("sensor_msgs/CompressedImage");
 
-  // get declared transports
-  QList<QString> transports;
-  image_transport::ImageTransport it(getNodeHandle());
-  std::vector<std::string> declared = it.getDeclaredTransports();
-  for (std::vector<std::string>::const_iterator it = declared.begin(); it != declared.end(); it++)
-  {
-    //qDebug("ImageView::updateTopicList() declared transport '%s'", it->c_str());
-    QString transport = it->c_str();
+  // // get declared transports
+  // QList<QString> transports;
+  // image_transport::ImageTransport it(getNodeHandle());
+  // std::vector<std::string> declared = it.getDeclaredTransports();
+  // for (std::vector<std::string>::const_iterator it = declared.begin(); it != declared.end(); it++)
+  // {
+  //   //qDebug("ImageView::updateTopicList() declared transport '%s'", it->c_str());
+  //   QString transport = it->c_str();
 
-    // strip prefix from transport name
-    QString prefix = "image_transport/";
-    if (transport.startsWith(prefix))
-    {
-      transport = transport.mid(prefix.length());
-    }
-    transports.append(transport);
-  }
+  //   // strip prefix from transport name
+  //   QString prefix = "image_transport/";
+  //   if (transport.startsWith(prefix))
+  //   {
+  //     transport = transport.mid(prefix.length());
+  //   }
+  //   transports.append(transport);
+  // }
 
-  QString selected = ui_.topics_combo_box->currentText();
+  // QString selected = ui_.topics_combo_box->currentText();
 
-  // fill combo box
-  QList<QString> topics = getTopics(message_types, message_sub_types, transports).values();
-  topics.append("");
-  qSort(topics);
-  ui_.topics_combo_box->clear();
-  for (QList<QString>::const_iterator it = topics.begin(); it != topics.end(); it++)
-  {
-    QString label(*it);
-    label.replace(" ", "/");
-    ui_.topics_combo_box->addItem(label, QVariant(*it));
-  }
+  // // fill combo box
+  // QList<QString> topics = getTopics(message_types, message_sub_types, transports).values();
+  // topics.append("");
+  // qSort(topics);
+  // ui_.topics_combo_box->clear();
+  // for (QList<QString>::const_iterator it = topics.begin(); it != topics.end(); it++)
+  // {
+  //   QString label(*it);
+  //   label.replace(" ", "/");
+  //   ui_.topics_combo_box->addItem(label, QVariant(*it));
+  // }
 
-  // restore previous selection
-  selectTopic(selected);
+  // // restore previous selection
+  // selectTopic(selected);
 }
 
 QList<QString> ImageView::getTopicList(const QSet<QString>& message_types, const QList<QString>& transports)
@@ -231,46 +232,48 @@ QList<QString> ImageView::getTopicList(const QSet<QString>& message_types, const
 
 QSet<QString> ImageView::getTopics(const QSet<QString>& message_types, const QSet<QString>& message_sub_types, const QList<QString>& transports)
 {
-  ros::master::V_TopicInfo topic_info;
-  ros::master::getTopics(topic_info);
+  std::map<std::string, std::vector<std::string>> topic_info = this->get_topic_names_and_types()
 
   QSet<QString> all_topics;
-  for (ros::master::V_TopicInfo::const_iterator it = topic_info.begin(); it != topic_info.end(); it++)
+  for (std::map<std::string, std::vector<std::string>>::iterator it = topic_info.begin(); it != topic_info.end(); ++it)
   {
-    all_topics.insert(it->name.c_str());
+    all_topics.insert(it->first.c_str());
   }
 
   QSet<QString> topics;
-  for (ros::master::V_TopicInfo::const_iterator it = topic_info.begin(); it != topic_info.end(); it++)
+  for (std::map<std::string, std::vector<std::string>>::iterator it = topic_info.begin(); it != topic_info.end(); ++it)
   {
-    if (message_types.contains(it->datatype.c_str()))
+    for (std::vector<std::string>::const_iterator msg_type_it = it->second.begin(); msg_type_it != it->second.end(); ++msg_type_it)
     {
-      QString topic = it->name.c_str();
-
-      // add raw topic
-      topics.insert(topic);
-      //qDebug("ImageView::getTopics() raw topic '%s'", topic.toStdString().c_str());
-
-      // add transport specific sub-topics
-      for (QList<QString>::const_iterator jt = transports.begin(); jt != transports.end(); jt++)
+      if (message_types.contains(msg_type_it->c_str()))
       {
-        if (all_topics.contains(topic + "/" + *jt))
+        QString topic = it->first.c_str();
+
+        // add raw topic
+        topics.insert(topic);
+        //qDebug("ImageView::getTopics() raw topic '%s'", topic.toStdString().c_str());
+
+        // add transport specific sub-topics
+        for (QList<QString>::const_iterator jt = transports.begin(); jt != transports.end(); jt++)
         {
-          QString sub = topic + " " + *jt;
-          topics.insert(sub);
-          //qDebug("ImageView::getTopics() transport specific sub-topic '%s'", sub.toStdString().c_str());
+          if (all_topics.contains(topic + "/" + *jt))
+          {
+            QString sub = topic + " " + *jt;
+            topics.insert(sub);
+            //qDebug("ImageView::getTopics() transport specific sub-topic '%s'", sub.toStdString().c_str());
+          }
         }
       }
-    }
-    if (message_sub_types.contains(it->datatype.c_str()))
-    {
-      QString topic = it->name.c_str();
-      int index = topic.lastIndexOf("/");
-      if (index != -1)
+      if (message_sub_types.contains(msg_type_it->c_str()))
       {
-        topic.replace(index, 1, " ");
-        topics.insert(topic);
-        //qDebug("ImageView::getTopics() transport specific sub-topic '%s'", topic.toStdString().c_str());
+        QString topic = it->first.c_str();
+        int index = topic.lastIndexOf("/");
+        if (index != -1)
+        {
+          topic.replace(index, 1, " ");
+          topics.insert(topic);
+          //qDebug("ImageView::getTopics() transport specific sub-topic '%s'", topic.toStdString().c_str());
+        }
       }
     }
   }
@@ -376,9 +379,10 @@ void ImageView::onMousePublish(bool checked)
 
   if(checked)
   {
-    pub_mouse_left_ = getNodeHandle().advertise<geometry_msgs::Point>(topicName, 1000);
-  } else {
-    pub_mouse_left_.shutdown();
+    pub_mouse_left_ = create_publisher<geometry_msgs::msg::Point>(topicName, 1000);;
+
+  // } else {
+  //   pub_mouse_left_.shutdown();
   }
 }
 
@@ -386,13 +390,13 @@ void ImageView::onMouseLeft(int x, int y)
 {
   if(ui_.publish_click_location_check_box->isChecked() && !ui_.image_frame->getImage().isNull())
   {
-    geometry_msgs::Point clickCanvasLocation;
+    geometry_msgs::msg::Point clickCanvasLocation;
     // Publish click location in pixel coordinates
     clickCanvasLocation.x = round((double)x/(double)ui_.image_frame->width()*(double)ui_.image_frame->getImage().width());
     clickCanvasLocation.y = round((double)y/(double)ui_.image_frame->height()*(double)ui_.image_frame->getImage().height());
     clickCanvasLocation.z = 0;
 
-    geometry_msgs::Point clickLocation = clickCanvasLocation;
+    geometry_msgs::msg::Point clickLocation = clickCanvasLocation;
 
     switch(rotate_state_)
     {
@@ -412,7 +416,7 @@ void ImageView::onMouseLeft(int x, int y)
         break;
     }
 
-    pub_mouse_left_.publish(clickLocation);
+    pub_mouse_left_->publish(clickLocation);
   }
 }
 
@@ -527,7 +531,7 @@ void ImageView::overlayGrid()
   }
 }
 
-void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
+void ImageView::callbackImage(const sensor_msgs::msg::Image::ConstPtr& msg)
 {
   try
   {
