@@ -294,28 +294,28 @@ void ImageView::selectTopic(const QString& topic)
 
 void ImageView::onTopicChanged(int index)
 {
-  // subscriber_.shutdown();
+  subscriber_.shutdown();
 
-  // // reset image on topic change
-  // ui_.image_frame->setImage(QImage());
+  // reset image on topic change
+  ui_.image_frame->setImage(QImage());
 
-  // QStringList parts = ui_.topics_combo_box->itemData(index).toString().split(" ");
-  // QString topic = parts.first();
-  // QString transport = parts.length() == 2 ? parts.last() : "raw";
+  QStringList parts = ui_.topics_combo_box->itemData(index).toString().split(" ");
+  QString topic = parts.first();
+  QString transport = parts.length() == 2 ? parts.last() : "raw";
 
-  // if (!topic.isEmpty())
-  // {
-  //   image_transport::ImageTransport it(node_);
-  //   image_transport::TransportHints hints(node_, transport.toStdString());
-  //   try {
-  //     subscriber_ = it.subscribe(topic.toStdString(), 1, &ImageView::callbackImage, this, hints);
-  //     //qDebug("ImageView::onTopicChanged() to topic '%s' with transport '%s'", topic.toStdString().c_str(), subscriber_.getTransport().c_str());
-  //   } catch (image_transport::TransportLoadException& e) {
-  //     QMessageBox::warning(widget_, tr("Loading image transport plugin failed"), e.what());
-  //   }
-  // }
+  if (!topic.isEmpty())
+  {
+    image_transport::ImageTransport it(node_);
+    const image_transport::TransportHints hints(node_, transport.toStdString());
+    try {
+      subscriber_ = it.subscribe(topic.toStdString(), 1, &ImageView::callbackImage, this, &hints);
+      qDebug("ImageView::onTopicChanged() to topic '%s' with transport '%s'", topic.toStdString().c_str(), subscriber_.getTransport().c_str());
+    } catch (image_transport::TransportLoadException& e) {
+      QMessageBox::warning(widget_, tr("Loading image transport plugin failed"), e.what());
+    }
+  }
 
-  // onMousePublish(ui_.publish_click_location_check_box->isChecked());
+  onMousePublish(ui_.publish_click_location_check_box->isChecked());
 }
 
 void ImageView::onZoom1(bool checked)
