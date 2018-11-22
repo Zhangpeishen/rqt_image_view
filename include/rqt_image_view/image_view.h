@@ -35,11 +35,11 @@
 
 #include <rqt_gui_cpp/plugin.h>
 
-#include "ui_image_view.h"
+#include <ui_image_view.h>
 
 #include <image_transport/image_transport.h>
-// #include <ros/package.h>
-// #include <ros/macros.h>
+#include <image_transport/subscriber.h>
+
 #include <sensor_msgs/msg/image.hpp>
 #include <geometry_msgs/msg/point.hpp>
 

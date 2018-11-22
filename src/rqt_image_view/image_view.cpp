@@ -33,7 +33,6 @@
 #include <rqt_image_view/image_view.h>
 
 #include <pluginlib/class_list_macros.h>
-// #include <ros/master.h>
 #include <sensor_msgs/image_encodings.hpp>
 
 #include <cv_bridge/cv_bridge.h>
@@ -47,7 +46,6 @@ namespace rqt_image_view {
 
 ImageView::ImageView()
   : rqt_gui_cpp::Plugin()
-  , rclcpp::Node("ImageView")
   , widget_(0)
   , num_gridlines_(0)
   , rotate_state_(ROTATE_0)
@@ -118,7 +116,7 @@ void ImageView::initPlugin(qt_gui_cpp::PluginContext& context)
 void ImageView::shutdownPlugin()
 {
   subscriber_.shutdown();
-  // pub_mouse_left_.shutdown();
+  pub_mouse_left_.reset();
 }
 
 void ImageView::saveSettings(qt_gui_cpp::Settings& plugin_settings, qt_gui_cpp::Settings& instance_settings) const
@@ -183,56 +181,56 @@ void ImageView::restoreSettings(const qt_gui_cpp::Settings& plugin_settings, con
 
 void ImageView::updateTopicList()
 {
-  // QSet<QString> message_types;
-  // message_types.insert("sensor_msgs/Image");
-  // QSet<QString> message_sub_types;
-  // message_sub_types.insert("sensor_msgs/CompressedImage");
-
-  // // get declared transports
-  // QList<QString> transports;
-  // image_transport::ImageTransport it(getNodeHandle());
-  // std::vector<std::string> declared = it.getDeclaredTransports();
-  // for (std::vector<std::string>::const_iterator it = declared.begin(); it != declared.end(); it++)
-  // {
-  //   //qDebug("ImageView::updateTopicList() declared transport '%s'", it->c_str());
-  //   QString transport = it->c_str();
-
-  //   // strip prefix from transport name
-  //   QString prefix = "image_transport/";
-  //   if (transport.startsWith(prefix))
-  //   {
-  //     transport = transport.mid(prefix.length());
-  //   }
-  //   transports.append(transport);
-  // }
-
-  // QString selected = ui_.topics_combo_box->currentText();
-
-  // // fill combo box
-  // QList<QString> topics = getTopics(message_types, message_sub_types, transports).values();
-  // topics.append("");
-  // qSort(topics);
-  // ui_.topics_combo_box->clear();
-  // for (QList<QString>::const_iterator it = topics.begin(); it != topics.end(); it++)
-  // {
-  //   QString label(*it);
-  //   label.replace(" ", "/");
-  //   ui_.topics_combo_box->addItem(label, QVariant(*it));
-  // }
-
-  // // restore previous selection
-  // selectTopic(selected);
-}
-
-QList<QString> ImageView::getTopicList(const QSet<QString>& message_types, const QList<QString>& transports)
-{
+  QSet<QString> message_types;
+  message_types.insert("sensor_msgs/Image");
   QSet<QString> message_sub_types;
-  return getTopics(message_types, message_sub_types, transports).values();
+  message_sub_types.insert("sensor_msgs/CompressedImage");
+
+  // get declared transports
+  QList<QString> transports;
+  image_transport::ImageTransport it(node_);
+  std::vector<std::string> declared = it.getDeclaredTransports();
+  for (std::vector<std::string>::const_iterator it = declared.begin(); it != declared.end(); it++)
+  {
+    //qDebug("ImageView::updateTopicList() declared transport '%s'", it->c_str());
+    QString transport = it->c_str();
+
+    // strip prefix from transport name
+    QString prefix = "image_transport/";
+    if (transport.startsWith(prefix))
+    {
+      transport = transport.mid(prefix.length());
+    }
+    transports.append(transport);
+  }
+
+  QString selected = ui_.topics_combo_box->currentText();
+
+  // fill combo box
+  QList<QString> topics = getTopics(message_types, message_sub_types, transports).values();
+  topics.append("");
+  qSort(topics);
+  ui_.topics_combo_box->clear();
+  for (QList<QString>::const_iterator it = topics.begin(); it != topics.end(); it++)
+  {
+    QString label(*it);
+    label.replace(" ", "/");
+    ui_.topics_combo_box->addItem(label, QVariant(*it));
+  }
+
+  // restore previous selection
+  selectTopic(selected);
 }
+
+// QList<QString> ImageView::getTopicList(const QSet<QString>& message_types, const QList<QString>& transports)
+// {
+//   QSet<QString> message_sub_types;
+//   return getTopics(message_types, message_sub_types, transports).values();
+// }
 
 QSet<QString> ImageView::getTopics(const QSet<QString>& message_types, const QSet<QString>& message_sub_types, const QList<QString>& transports)
 {
-  std::map<std::string, std::vector<std::string>> topic_info = this->get_topic_names_and_types()
+  std::map<std::string, std::vector<std::string>> topic_info = node_->get_topic_names_and_types();
 
   QSet<QString> all_topics;
   for (std::map<std::string, std::vector<std::string>>::iterator it = topic_info.begin(); it != topic_info.end(); ++it)
@@ -296,28 +294,28 @@ void ImageView::selectTopic(const QString& topic)
 
 void ImageView::onTopicChanged(int index)
 {
-  subscriber_.shutdown();
+  // subscriber_.shutdown();
 
-  // reset image on topic change
-  ui_.image_frame->setImage(QImage());
+  // // reset image on topic change
+  // ui_.image_frame->setImage(QImage());
 
-  QStringList parts = ui_.topics_combo_box->itemData(index).toString().split(" ");
-  QString topic = parts.first();
-  QString transport = parts.length() == 2 ? parts.last() : "raw";
+  // QStringList parts = ui_.topics_combo_box->itemData(index).toString().split(" ");
+  // QString topic = parts.first();
+  // QString transport = parts.length() == 2 ? parts.last() : "raw";
 
-  if (!topic.isEmpty())
-  {
-    image_transport::ImageTransport it(getNodeHandle());
-    image_transport::TransportHints hints(transport.toStdString());
-    try {
-      subscriber_ = it.subscribe(topic.toStdString(), 1, &ImageView::callbackImage, this, hints);
-      //qDebug("ImageView::onTopicChanged() to topic '%s' with transport '%s'", topic.toStdString().c_str(), subscriber_.getTransport().c_str());
-    } catch (image_transport::TransportLoadException& e) {
-      QMessageBox::warning(widget_, tr("Loading image transport plugin failed"), e.what());
-    }
-  }
+  // if (!topic.isEmpty())
+  // {
+  //   image_transport::ImageTransport it(node_);
+  //   image_transport::TransportHints hints(node_, transport.toStdString());
+  //   try {
+  //     subscriber_ = it.subscribe(topic.toStdString(), 1, &ImageView::callbackImage, this, hints);
+  //     //qDebug("ImageView::onTopicChanged() to topic '%s' with transport '%s'", topic.toStdString().c_str(), subscriber_.getTransport().c_str());
+  //   } catch (image_transport::TransportLoadException& e) {
+  //     QMessageBox::warning(widget_, tr("Loading image transport plugin failed"), e.what());
+  //   }
+  // }
 
-  onMousePublish(ui_.publish_click_location_check_box->isChecked());
+  // onMousePublish(ui_.publish_click_location_check_box->isChecked());
 }
 
 void ImageView::onZoom1(bool checked)
@@ -379,10 +377,12 @@ void ImageView::onMousePublish(bool checked)
 
   if(checked)
   {
-    pub_mouse_left_ = create_publisher<geometry_msgs::msg::Point>(topicName, 1000);;
+    rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
+    custom_qos_profile.depth = 1000;
+    pub_mouse_left_ = node_->create_publisher<geometry_msgs::msg::Point>(topicName, custom_qos_profile);
 
-  // } else {
-  //   pub_mouse_left_.shutdown();
+  } else {
+    pub_mouse_left_.reset();
   }
 }
 

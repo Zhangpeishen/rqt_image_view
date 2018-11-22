@@ -25,7 +25,6 @@ find_package(geometry_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(Qt5Widgets REQUIRED)
 find_package(ament_cmake_python REQUIRED)
-find_package(class_loader)
 
 
 set(rqt_image_view_SRCS
@@ -44,7 +43,6 @@ set(rqt_image_view_UIS
 
 set(rqt_image_view_INCLUDE_DIRECTORIES
   include
-  ${class_loader_INCLUDE_DIRS}
   ${rqt_gui_cpp_INCLUDE_DIRS}
   ${qt_gui_cpp_INCLUDE_DIRS}
   ${Qt5Widgets_INCLUDE_DIRS}
