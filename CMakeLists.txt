@@ -26,6 +26,8 @@ find_package(cv_bridge REQUIRED)
 find_package(Qt5Widgets REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 
+ament_python_install_package(${PROJECT_NAME}
+    PACKAGE_DIR src/${PROJECT_NAME})
 
 set(rqt_image_view_SRCS
   src/rqt_image_view/image_view.cpp

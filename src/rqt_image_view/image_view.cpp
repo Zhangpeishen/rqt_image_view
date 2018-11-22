@@ -306,7 +306,7 @@ void ImageView::onTopicChanged(int index)
   if (!topic.isEmpty())
   {
     image_transport::ImageTransport it(node_);
-    const image_transport::TransportHints hints(node_, transport.toStdString());
+    const image_transport::TransportHints hints(node_.get(), transport.toStdString());
     try {
       subscriber_ = it.subscribe(topic.toStdString(), 1, &ImageView::callbackImage, this, &hints);
       qDebug("ImageView::onTopicChanged() to topic '%s' with transport '%s'", topic.toStdString().c_str(), subscriber_.getTransport().c_str());
